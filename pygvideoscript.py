@@ -19,6 +19,7 @@ STEPS = 35
 GUIDANCE_SCALE = 7.5
 SEED = 1337970693
 DENOISING_STRENGTH = 0.45
+TEMPORAL_STRENGTH = 0.5  # how much previous frame dominates
 
 MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
 MODEL_CACHE = "/home/rgg/hf_models"
@@ -36,6 +37,32 @@ def color_range_mask(image_rgb, target_color, color_range):
     lower = np.clip(target - color_range, 0, 255).astype(np.uint8)
     upper = np.clip(target + color_range, 0, 255).astype(np.uint8)
     return cv2.inRange(image_rgb, lower, upper)
+
+
+def merge_temporal(prev_bgr, curr_bgr, strength):
+    """
+    strength = how much previous generated frame dominates
+    """
+    assert 0.0 <= strength <= 1.0
+
+    prev_lab = cv2.cvtColor(prev_bgr, cv2.COLOR_BGR2LAB)
+    curr_lab = cv2.cvtColor(curr_bgr, cv2.COLOR_BGR2LAB)
+
+    merged = curr_lab.copy()
+
+    # Blend luminance
+    merged[:, :, 0] = (
+        prev_lab[:, :, 0] * strength +
+        curr_lab[:, :, 0] * (1.0 - strength)
+    ).astype(np.uint8)
+
+    # Color mostly from previous frame to reduce flicker
+    merged[:, :, 1:] = (
+        prev_lab[:, :, 1:] * 0.8 +
+        curr_lab[:, :, 1:] * 0.2
+    ).astype(np.uint8)
+
+    return cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
 
 # =========================
 # Noise / Inpainting
@@ -62,7 +89,7 @@ def inpaint_replace(image_rgb, mask, radius):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Video → frames → optional noise → SDXL img2img"
+        description="Video → temporal merge → SDXL img2img"
     )
 
     parser.add_argument("video_file")
@@ -88,6 +115,13 @@ def main():
     parser.add_argument("--seed", type=int, default=SEED)
     parser.add_argument("--denoising-strength", type=float, default=DENOISING_STRENGTH)
 
+    parser.add_argument(
+        "--temporal-strength",
+        type=float,
+        default=TEMPORAL_STRENGTH,
+        help="How much previous generated frame influences the next (0-1)"
+    )
+
     args = parser.parse_args()
 
     ensure_output_dir(args.output_path)
@@ -104,9 +138,6 @@ def main():
         local_files_only=True,
     ).to("cuda")
 
-#    pipe.enable_xformers_memory_efficient_attention()
-    pipe.enable_xformers_memory_efficient_attention = False
-
     pipe.enable_model_cpu_offload()
 
     generator = torch.Generator(device="cuda").manual_seed(args.seed)
@@ -121,6 +152,7 @@ def main():
         sys.exit(1)
 
     frame_index = 0
+    prev_generated_bgr = None
 
     while True:
         ret, frame = cap.read()
@@ -135,6 +167,7 @@ def main():
 
         image_bgr = frame
         image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+
         mask = color_range_mask(
             image_rgb,
             tuple(args.target_color),
@@ -147,6 +180,17 @@ def main():
         elif args.method == "inpaint" and mask.any():
             image_rgb = inpaint_replace(image_rgb, mask, args.inpaint_radius)
             image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+
+        # =========================
+        # Temporal merge
+        # =========================
+
+        if prev_generated_bgr is not None:
+            image_bgr = merge_temporal(
+                prev_generated_bgr,
+                image_bgr,
+                args.temporal_strength
+            )
 
         # =========================
         # SDXL img2img
@@ -167,7 +211,13 @@ def main():
         ).images[0]
 
         filename = f"{frame_index:016d}.png"
-        result.save(os.path.join(args.output_path, filename))
+        output_path = os.path.join(args.output_path, filename)
+        result.save(output_path)
+
+        prev_generated_bgr = cv2.cvtColor(
+            np.array(result),
+            cv2.COLOR_RGB2BGR
+        )
 
         print(f"Frame {frame_index} done")
         frame_index += 1
