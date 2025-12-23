@@ -135,3 +135,161 @@ These frames can later be stitched back into a video using tools such as ffmpeg.
 ## License
 
 This project is provided as-is for research and experimentation purposes.
+
+# RIFE Folder Stitcher
+
+This script takes a folder of sequential image frames and uses RIFE (Real-Time Intermediate Flow Estimation) to interpolate intermediate frames between every consecutive pair. The result is a temporally smooth, high-framerate frame sequence suitable for final video encoding.
+
+It is designed to work as the second stage of a pipeline where frames are first generated or stylized (for example via SDXL img2img), and then motion smoothness is restored using neural frame interpolation.
+
+---
+
+## What This Script Achieves
+
+Given an input directory containing frames like:
+
+```text
+0000000000000000.png
+0000000000000001.png
+0000000000000002.png
+```
+
+The script:
+
+1. Iterates over every consecutive frame pair `(N, N+1)`
+2. Runs RIFE interpolation for each pair
+3. Collects all generated intermediate frames
+4. Renumbers them into a single continuous sequence
+5. Writes the result into a final output directory
+
+The final frame set can then be encoded into a smooth video using ffmpeg.
+
+---
+
+## Directory Layout
+
+This script assumes the following project structure:
+
+```text
+project_root/
+├── video_input_frames/     # Input frames (from SDXL or other source)
+├── final_frames/           # Output frames after RIFE interpolation
+└── ECCV2022-RIFE/
+    ├── inference_img.py    # RIFE inference script
+    ├── output/             # Temporary RIFE output (auto-cleaned)
+    └── rife-folder-stitch.py
+```
+
+Paths are resolved automatically based on the script location.
+
+---
+
+## Requirements
+
+* Python 3.9+
+* PyTorch with CUDA support
+* A working RIFE repository (ECCV2022-RIFE)
+* NVIDIA GPU recommended
+
+The script calls RIFE via `inference_img.py` using the same Python interpreter that launched it.
+
+---
+
+## Configuration
+
+Key configuration values are defined at the top of the script:
+
+| Variable           | Description                                         | Default              |
+| ------------------ | --------------------------------------------------- | -------------------- |
+| `INPUT_DIR`        | Directory containing input frames                   | `video_input_frames` |
+| `FINAL_OUTPUT_DIR` | Directory for stitched output frames                | `final_frames`       |
+| `EXP`              | RIFE interpolation exponent (2^EXP frames per pair) | `6`                  |
+| `PAD`              | Zero-padding width for frame numbering              | `16`                 |
+
+`EXP=6` generates 64 interpolated steps between each frame pair.
+
+---
+
+## How It Works
+
+### 1. Frame Pair Iteration
+
+The script walks through the input frames in sorted order and processes each consecutive pair.
+
+### 2. RIFE Execution
+
+For each pair, RIFE is executed via:
+
+```bash
+python inference_img.py --img frameA.png frameB.png --exp EXP
+```
+
+RIFE writes its output into a temporary directory.
+
+### 3. Frame Collection and Renumbering
+
+* All RIFE output frames are collected
+* `img0.png` is skipped for all pairs except the first to avoid duplicate frames
+* Frames are renumbered into a single global sequence
+
+This guarantees a continuous, duplication-free frame timeline.
+
+---
+
+## Output
+
+The final frames are written to:
+
+```text
+final_frames/
+```
+
+With filenames like:
+
+```text
+0000000000000000.png
+0000000000000001.png
+0000000000000002.png
+```
+
+These frames are ready for direct video encoding.
+
+---
+
+## FFmpeg Example
+
+After completion, the script prints a ready-to-use ffmpeg command:
+
+```bash
+ffmpeg -framerate 30 -i final_frames/%016d.png \
+  -c:v libx264 -pix_fmt yuv420p -crf 18 output.mp4
+```
+
+Adjust the framerate as needed depending on your interpolation factor.
+
+---
+
+## Notes
+
+* Temporary RIFE output is cleaned before each interpolation step
+* The script fails fast if RIFE produces no frames
+* Designed for batch, offline processing
+* Works best when input frames are already temporally coherent
+
+---
+
+## Intended Use
+
+This script is ideal for:
+
+* AI-generated animation pipelines
+* SDXL or diffusion-based video stylization
+* Increasing perceived framerate without re-rendering frames
+* Reducing motion stutter in generative video workflows
+
+---
+
+## License
+
+Provided as-is for research and experimentation purposes.
+
