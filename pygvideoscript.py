@@ -18,7 +18,7 @@ HEIGHT = 1024
 STEPS = 35
 GUIDANCE_SCALE = 7.5
 SEED = 1337970693
-DENOISING_STRENGTH = 0.45
+DENOISING_STRENGTH = 0.8
 TEMPORAL_STRENGTH = 0.5  # how much previous frame dominates
 
 MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
