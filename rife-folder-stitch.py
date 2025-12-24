@@ -1,3 +1,4 @@
+#!venv-rife/bin/python3
 import subprocess
 import shutil
 from pathlib import Path
@@ -17,7 +18,7 @@ RIFE_SCRIPT = RIFE_ROOT / "inference_img.py"
 RIFE_OUTPUT_DIR = RIFE_ROOT / "output"
 FINAL_OUTPUT_DIR = PROJECT_ROOT / "final_frames"
 
-EXP = 6
+EXP = 5
 PYTHON_BIN = sys.executable
 
 PAD = 16  # match SDXL frame numbering
@@ -35,7 +36,7 @@ def clean_dir(path: Path):
     path.mkdir(parents=True, exist_ok=True)
 
 def run_rife(img_a: Path, img_b: Path):
-    log(f"Interpolating:")
+    log("Interpolating:")
     log(f"  A = {img_a.name}")
     log(f"  B = {img_b.name}")
 
@@ -62,19 +63,19 @@ def run_rife(img_a: Path, img_b: Path):
         print(result.stderr)
         raise RuntimeError("RIFE failed")
 
-def collect_and_renumber(start_index: int, skip_first: bool) -> int:
+def collect_and_renumber(start_index: int) -> int:
     frames = sorted(
         RIFE_OUTPUT_DIR.glob("img*.png"),
         key=lambda p: int(re.findall(r"\d+", p.stem)[0])
     )
 
-    if not frames:
-        raise RuntimeError("RIFE produced no frames")
+    if len(frames) < 3:
+        raise RuntimeError("RIFE output too small to contain interpolated frames")
 
-    if skip_first:
-        frames = frames[1:]  # drop img0.png to avoid duplication
+    # Drop endpoints: img0 (FrameA) and imgN (FrameB)
+    interpolated = frames[1:-1]
 
-    for frame in frames:
+    for frame in interpolated:
         out_name = f"{start_index:0{PAD}d}.png"
         dest = FINAL_OUTPUT_DIR / out_name
         shutil.move(frame, dest)
@@ -90,6 +91,7 @@ def main():
     log(f"RIFE_ROOT    = {RIFE_ROOT}")
     log(f"PROJECT_ROOT = {PROJECT_ROOT}")
     log(f"INPUT_DIR    = {INPUT_DIR}")
+    log(f"EXP          = {EXP}")
 
     if not RIFE_SCRIPT.exists():
         raise RuntimeError("inference_img.py not found")
@@ -114,13 +116,10 @@ def main():
 
         time.sleep(0.1)
 
-        global_index = collect_and_renumber(
-            global_index,
-            skip_first=(i > 0)
-        )
+        global_index = collect_and_renumber(global_index)
 
-    log("\n✅ ALL DONE")
-    log(f"Total frames written: {global_index}")
+    log("\nALL DONE")
+    log(f"Total interpolated frames written: {global_index}")
     log(f"Final frames dir: {FINAL_OUTPUT_DIR}")
 
     print("\nFFmpeg:")
