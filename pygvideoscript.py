@@ -22,7 +22,7 @@ DENOISING_STRENGTH = 0.8
 TEMPORAL_STRENGTH = 0.5  # how much previous frame dominates
 
 MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
-MODEL_CACHE = "/home/rgg/hf_models"
+MODEL_CACHE = "/tmp/hf_models"
 
 # =========================
 # Helpers
