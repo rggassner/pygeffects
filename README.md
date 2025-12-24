@@ -57,7 +57,7 @@ The script uses Stable Diffusion XL Base 1.0 and expects the model to already be
 By default:
 
 * Model ID: `stabilityai/stable-diffusion-xl-base-1.0`
-* Cache directory: `/home/rgg/hf_models`
+* Cache directory: `/tmp/hf_models`
 
 The pipeline is loaded with `local_files_only=True`, so the model must be present in the cache directory.
 
