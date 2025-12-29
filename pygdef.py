@@ -23,80 +23,132 @@ USE_SATURATION_SUPPRESSION = True
 USE_MICRO_NOISE = True
 USE_BLACK_INPAINT = True
 
+# =========================================================
+# 🎛 GLOBAL DEFAULT PARAMETERS
+# =========================================================
+
 # MODEL_ID
 # Hugging Face model identifier to load (SDXL base, img2img compatible)
+# default: "stabilityai/stable-diffusion-xl-base-1.0"
+# range: SDXL-compatible models only
 MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
 
+
 # MODEL_CACHE
-# Local directory where Hugging Face models are stored/cached
+# Local directory where Hugging Face models are cached
+# default: "/home/rgg/hf_models"
+# range: any valid local path with read access
 MODEL_CACHE = "hf_models"
 
+
 # PROMPT
-# Base positive prompt describing the desired visual content and style
+# Base positive prompt defining subject, style, and visual intent
+# default: fractal octopus alcohol ink mosaic
+# range: free text; keep concise but descriptive for recursion
 PROMPT = (
-    "fractal art of an octopus in the style of alcohol ink, mosaic, "
-    "intricate details, fine textures, complex patterns"
+        "(4k,8k,Ultra HD), masterpiece, best quality, ultra-detailed, very aesthetic, depth of field, best lighting, detailed illustration, detailed background, cinematic, moon, samurai, waves, red oni mask, cherry tree, holding fishing rod, hand up, straw hat, sitting on rock,"
 )
+
 
 # NEGATIVE_BASE
-# Core negative prompt to suppress common SD issues (artifacts, anatomy, text, etc.)
+# Core negative prompt suppressing artifacts, anatomy issues, text, etc.
+# default: generic SDXL cleanup negatives
+# range: add/remove terms carefully; too long may weaken guidance
 NEGATIVE_BASE = (
-    "blurry, low quality, distorted, low resolution, extra limbs, "
-    "mutated hands, artifacts, watermark, text, nsfw"
+        " (worst quality, low quality:1.4), (watermark), censored, two katana,"
 )
 
+
 # NEGATIVE_SATURATION
-# Extra negative prompt specifically targeting neon, glow, and oversaturation
+# Extra negative prompt to suppress neon, glow, and oversaturation drift
+# default: neon suppression
+# range: useful for long img2img runs; can be disabled if desired
 NEGATIVE_SATURATION = (
     "neon, oversaturated, glowing colors, high contrast gradients"
 )
 
+
 # WIDTH / HEIGHT
-# Output resolution for generated images (SDXL performs best at 1024x1024)
+# Output resolution of generated frames
+# default: 1024
+# range: 1024 recommended for SDXL; avoid non-square unless intentional
 WIDTH = HEIGHT = 1024
 
+
 # STEPS
-# Number of diffusion steps per frame (higher = more detail, slower)
+# Number of diffusion steps per frame
+# default: 35
+# range: 20–50 (higher = more detail, slower, diminishing returns >40)
 STEPS = 35
 
+
 # CFG
-# Classifier-Free Guidance scale (higher = closer to prompt, too high can cause artifacts)
-CFG = 7.5
+# Classifier-Free Guidance scale (prompt adherence strength)
+# default: 7.5
+# range: 5.5–9.0 (too high may cause artifacts or color burn-in)
+CFG = 6.5
+
 
 # CFG_RESET_BOOST
-# Temporary CFG increase applied during semantic reset frames to re-anchor structure
-CFG_RESET_BOOST = 1.0
+# Extra CFG added during semantic reset frames
+# default: 1.5
+# range: 0.5–3.0 (higher = stronger structure reassertion)
+CFG_RESET_BOOST = .5
+
 
 # BASE_DENOISE
-# Starting img2img denoise strength (controls how much the image can change per frame)
+# Initial img2img denoise strength (controls per-frame evolution)
+# default: 0.6
+# range: 0.45–0.7 (too high = chaos, too low = stagnation)
 BASE_DENOISE = 0.6
 
+
 # MIN_DENOISE
-# Lower bound for adaptive denoise decay (prevents the image from freezing)
+# Lower bound for adaptive denoise decay
+# default: 0.25
+# range: 0.2–0.35 (prevents the image from freezing)
 MIN_DENOISE = 0.25
 
+
 # DENOISE_DECAY
-# Amount subtracted from denoise per frame to slowly stabilize the image over time
+# Amount subtracted from denoise per frame
+# default: 0.0003
+# range: 0.0001–0.001 (higher = faster stabilization)
 DENOISE_DECAY = 0.0003
 
+
 # RESET_INTERVAL
-# Number of frames between semantic resets (reinjects structure and detail)
+# Number of frames between semantic resets
+# default: 50
+# range: 20–150 (shorter = more structure, longer = more drift)
 RESET_INTERVAL = 20
+
 
 # RESET_STRENGTH
 # Denoise strength used during semantic reset frames
-RESET_STRENGTH = 0.75
+# default: 0.75
+# range: 0.6–0.85 (too high can overwrite evolution)
+RESET_STRENGTH = 0.6
+
 
 # MICRO_NOISE_EVERY
-# Frequency (in frames) at which small noise is injected to prevent texture collapse
+# Frequency (in frames) to inject subtle noise
+# default: 20
+# range: 10–50 (lower = more texture refresh, higher = calmer evolution)
 MICRO_NOISE_EVERY = 20
 
+
 # MICRO_NOISE_AMOUNT
-# Blend strength of the injected micro-noise (very small values recommended)
+# Blend strength of injected micro-noise
+# default: 0.015
+# range: 0.005–0.03 (keep small to avoid grain buildup)
 MICRO_NOISE_AMOUNT = 0.015
 
+
 # SEED
-# Random seed for reproducibility (same seed = same evolution, given same parameters)
+# Random seed for reproducibility
+# default: 123456
+# range: any integer; fixed = deterministic evolution
 SEED = 123456
 
 
@@ -122,9 +174,9 @@ SEGMENTS = [
         "shift_y_per_frame": 0,
 
         # Optional overrides
-        "BASE_DENOISE": 0.55,
-        "DENOISE_DECAY": 0.00025,
-        "MICRO_NOISE_AMOUNT": 0.02,
+        #"BASE_DENOISE": 0.55,
+        #"DENOISE_DECAY": 0.00025,
+        #"MICRO_NOISE_AMOUNT": 0.02,
     },
     {
         "frames": 100,
