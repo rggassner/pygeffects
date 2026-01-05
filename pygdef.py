@@ -1,9 +1,9 @@
 #!venv/bin/python3
-import torch
-import random
-import cv2
-import numpy as np
 from pathlib import Path
+import random
+import torch
+import cv2 
+import numpy as np
 from PIL import Image
 from diffusers import (
     StableDiffusionXLImg2ImgPipeline,
@@ -46,7 +46,7 @@ MODEL_CACHE = "hf_models"
 # default: fractal octopus alcohol ink mosaic
 # range: free text; keep concise but descriptive for recursion
 PROMPT = (
-        "(4k,8k,Ultra HD), masterpiece, best quality, ultra-detailed, very aesthetic, depth of field, best lighting, detailed illustration, detailed background, cinematic, moon, samurai, waves, red oni mask, cherry tree, holding fishing rod, hand up, straw hat, sitting on rock,"
+        "A father and son statue in Madame Tussauds wax museum "
 )
 
 
@@ -55,7 +55,7 @@ PROMPT = (
 # default: generic SDXL cleanup negatives
 # range: add/remove terms carefully; too long may weaken guidance
 NEGATIVE_BASE = (
-        " (worst quality, low quality:1.4), (watermark), censored, two katana,"
+        " (worst quality, low quality:1.4), (watermark), censored,"
 )
 
 
@@ -100,7 +100,7 @@ CFG_RESET_BOOST = .5
 # Initial img2img denoise strength (controls per-frame evolution)
 # default: 0.6
 # range: 0.45–0.7 (too high = chaos, too low = stagnation)
-BASE_DENOISE = 0.6
+BASE_DENOISE = 0.45
 
 
 # MIN_DENOISE
@@ -238,6 +238,38 @@ def add_micro_noise(img, amount):
 # =========================================================
 
 def remove_black_pixels(img_pil):
+    """
+    Detects near-black pixels in an image and removes them via OpenCV inpainting.
+
+    This function identifies pixels close to a target black color using a
+    configurable tolerance range, builds a binary mask of those regions,
+    optionally blurs the mask to soften edges, and then applies Telea
+    inpainting to reconstruct the affected areas from surrounding context.
+
+    It is primarily intended to clean up black seams, voids, or artifacts
+    introduced by geometric transforms (zoom, rotation, shifting) during
+    recursive img2img pipelines.
+
+    Parameters
+    ----------
+    img_pil : PIL.Image.Image
+        Input RGB image to be processed.
+
+    Returns
+    -------
+    PIL.Image.Image
+        Image with black or near-black regions inpainted and visually blended
+        with surrounding pixels.
+
+    Notes
+    -----
+    - The target color, tolerance range, blur size, and inpaint radius are
+      controlled by the global BLACK_* configuration variables.
+    - OpenCV functions are dynamically bound (C-extension); pylint warnings
+      for `cv2` members are safely suppressed.
+    - Inpainting uses the Telea algorithm, which favors smooth and natural
+      reconstruction suitable for generative art workflows.
+    """    
     img_rgb = np.array(img_pil)
 
     lower = np.clip(
@@ -250,17 +282,17 @@ def remove_black_pixels(img_pil):
         0, 255
     ).astype(np.uint8)
 
-    mask = cv2.inRange(img_rgb, lower, upper)
+    mask = cv2.inRange(img_rgb, lower, upper) # pylint: disable=no-member
 
     if BLACK_MASK_BLUR > 0:
-        mask = cv2.GaussianBlur(mask, (BLACK_MASK_BLUR, BLACK_MASK_BLUR), 0)
+        mask = cv2.GaussianBlur(mask, (BLACK_MASK_BLUR, BLACK_MASK_BLUR), 0) # pylint: disable=no-member
 
-    inpainted = cv2.inpaint(
+    inpainted = cv2.inpaint( # pylint: disable=no-member
         img_rgb,
         mask,
         BLACK_INPAINT_RADIUS,
-        cv2.INPAINT_TELEA
-    )
+        cv2.INPAINT_TELEA # pylint: disable=no-member
+    ) 
 
     return Image.fromarray(inpainted)
 
@@ -295,13 +327,13 @@ pipe.scheduler = (
 )
 
 pipe.set_progress_bar_config(disable=True)
-generator = torch.Generator(device="cuda").manual_seed(SEED)
+GENERATOR = torch.Generator(device="cuda").manual_seed(SEED)
 
 # =========================================================
 # MAIN LOOP
 # =========================================================
 
-img = Image.open("input.png").convert("RGB").resize((WIDTH, HEIGHT))
+img = Image.open("input1.png").convert("RGB").resize((WIDTH, HEIGHT))
 frame_idx = 0
 
 for seg in SEGMENTS:
@@ -356,7 +388,7 @@ for seg in SEGMENTS:
             strength=strength,
             guidance_scale=guidance,
             num_inference_steps=segval(seg, "STEPS", STEPS),
-            generator=generator,
+            generator=GENERATOR,
         )
 
         img = result.images[0]
