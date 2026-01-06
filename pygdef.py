@@ -55,7 +55,7 @@ PROMPT = (
 # default: generic SDXL cleanup negatives
 # range: add/remove terms carefully; too long may weaken guidance
 NEGATIVE_BASE = (
-        " (worst quality, low quality:1.4), (watermark), censored,"
+        " (worst quality, low quality:1.4), (watermark), censored, two katana,"
 )
 
 
@@ -207,7 +207,7 @@ def apply_transform(img, zoom=1.0, rotate=0.0, shift_x=0, shift_y=0):
 
     if zoom != 1.0:
         nw, nh = int(w * zoom), int(h * zoom)
-        img = img.resize((nw, nh), Image.LANCZOS)
+        img = img.resize((nw, nh), Image.LANCZOS) # pylint: disable=no-member
         img = img.crop((
             (nw - w) // 2,
             (nh - h) // 2,
@@ -216,7 +216,7 @@ def apply_transform(img, zoom=1.0, rotate=0.0, shift_x=0, shift_y=0):
         ))
 
     if rotate != 0.0:
-        img = img.rotate(rotate, resample=Image.BICUBIC, expand=False)
+        img = img.rotate(rotate, resample=Image.BICUBIC, expand=False) # pylint: disable=no-member
 
     if shift_x or shift_y:
         shifted = Image.new("RGB", (w, h))
@@ -225,17 +225,35 @@ def apply_transform(img, zoom=1.0, rotate=0.0, shift_x=0, shift_y=0):
 
     return img
 
-# =========================================================
-# MICRO NOISE
-# =========================================================
 
-def add_micro_noise(img, amount):
-    noise = Image.effect_noise(img.size, random.uniform(2, 8)).convert("RGB")
-    return Image.blend(img, noise, amount)
+def add_micro_noise(image, amount):
+    """
+    Injects subtle, low-frequency noise into an image to refresh texture
+    and prevent visual stagnation during recursive img2img evolution.
 
-# =========================================================
-# BLACK INPAINT
-# =========================================================
+    A procedurally generated noise layer is blended with the input image
+    using a small alpha value, reintroducing micro-variation without
+    visibly degrading structure or coherence.
+
+    This technique helps counteract over-smoothing, color banding, and
+    detail collapse across long generation runs.
+
+    Parameters
+    ----------
+    image : PIL.Image.Image
+        Input image to receive micro-noise injection.
+    amount : float
+        Blend strength of the noise layer.
+        Typical range: 0.005–0.03.
+
+    Returns
+    -------
+    PIL.Image.Image
+        Image with subtle noise blended in.
+    """    
+    noise = Image.effect_noise(image.size, random.uniform(2, 8)).convert("RGB")
+    return Image.blend(image, noise, amount)
+
 
 def remove_black_pixels(img_pil):
     """
