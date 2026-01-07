@@ -198,17 +198,53 @@ SEGMENTS = [
 def segval(seg, key, default):
     return seg.get(key, default)
 
-# =========================================================
-# IMAGE TRANSFORM
-# =========================================================
 
-def apply_transform(img, zoom=1.0, rotate=0.0, shift_x=0, shift_y=0):
-    w, h = img.size
+def apply_transform(image, zoom=1.0, rotate=0.0, shift_x=0, shift_y=0):
+    """
+    Applies deterministic geometric transformations to an image while
+    preserving the original output dimensions.
+
+    The transformation sequence consists of:
+    1) Centered zoom with resize and crop to maintain resolution
+    2) In-place rotation around the image center
+    3) Pixel translation via x/y shifts with empty regions filled in black
+
+    This function is designed for frame-to-frame evolution in generative
+    pipelines, where small, controlled spatial changes accumulate over time
+    without altering image size or aspect ratio.
+
+    Parameters
+    ----------
+    image : PIL.Image.Image
+        Input image to be transformed.
+    zoom : float, optional
+        Scale factor applied uniformly to width and height.
+        Values > 1.0 zoom in, values < 1.0 zoom out.
+    rotate : float, optional
+        Rotation angle in degrees. Positive values rotate counter-clockwise.
+    shift_x : int, optional
+        Horizontal pixel shift. Positive values move the image right.
+    shift_y : int, optional
+        Vertical pixel shift. Positive values move the image down.
+
+    Returns
+    -------
+    PIL.Image.Image
+        Transformed image with the same dimensions as the input.
+
+    Notes
+    -----
+    - Zooming is center-cropped to avoid resolution drift.
+    - Rotation does not expand the canvas; corners may be clipped.
+    - Shifting introduces black padding, which can be handled downstream
+      by inpainting or diffusion-based correction.
+    """    
+    w, h = image.size
 
     if zoom != 1.0:
         nw, nh = int(w * zoom), int(h * zoom)
-        img = img.resize((nw, nh), Image.LANCZOS) # pylint: disable=no-member
-        img = img.crop((
+        image = image.resize((nw, nh), Image.LANCZOS) # pylint: disable=no-member
+        image = image.crop((
             (nw - w) // 2,
             (nh - h) // 2,
             (nw + w) // 2,
@@ -216,14 +252,14 @@ def apply_transform(img, zoom=1.0, rotate=0.0, shift_x=0, shift_y=0):
         ))
 
     if rotate != 0.0:
-        img = img.rotate(rotate, resample=Image.BICUBIC, expand=False) # pylint: disable=no-member
+        image = image.rotate(rotate, resample=Image.BICUBIC, expand=False) # pylint: disable=no-member
 
     if shift_x or shift_y:
         shifted = Image.new("RGB", (w, h))
-        shifted.paste(img, (shift_x, shift_y))
-        img = shifted
+        shifted.paste(image, (shift_x, shift_y))
+        image = shifted
 
-    return img
+    return image
 
 
 def add_micro_noise(image, amount):
