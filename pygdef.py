@@ -191,12 +191,34 @@ SEGMENTS = [
     },
 ]
 
-# =========================================================
-# SEGMENT VALUE RESOLVER
-# =========================================================
 
-def segval(seg, key, default):
-    return seg.get(key, default)
+def segval(segment, key, default):
+    """
+    Retrieves a configuration value from a segment dictionary with fallback.
+
+    This helper function allows per-segment parameter overrides while
+    gracefully falling back to a global or default value when the key
+    is not defined in the segment.
+
+    It is used to unify access to tunable parameters across animation
+    segments without scattering conditional logic throughout the
+    main generation loop.
+
+    Parameters
+    ----------
+    segment : dict
+        Segment configuration dictionary that may contain overrides.
+    key : str
+        Name of the parameter to retrieve.
+    default : Any
+        Value to return if the key is not present in the segment.
+
+    Returns
+    -------
+    Any
+        The segment-specific value if defined, otherwise the default.
+    """    
+    return segment.get(key, default)
 
 
 def apply_transform(image, zoom=1.0, rotate=0.0, shift_x=0, shift_y=0):
