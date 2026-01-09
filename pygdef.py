@@ -1,4 +1,49 @@
 #!venv/bin/python3
+"""
+Grid-based image outpainting using Stable Diffusion inpainting.
+
+This script scrapes a remote grid-style image layout, reconstructs the
+available tiles into a composite canvas, and uses Stable Diffusion
+inpainting to synthesize missing regions. The generated result is then
+iteratively refined to produce multiple variations, which are saved
+both as full images and as individual grid tiles.
+
+Core features
+-------------
+- Scrapes a 3×3 grid of images from a target website.
+- Rebuilds the known tiles into a base image.
+- Automatically constructs an inpainting mask for missing cells.
+- Uses a cached Stable Diffusion inpainting model for fast iteration.
+- Supports optional image embedding at user-defined coordinates.
+- Generates multiple output variations in a single run.
+- Saves per-iteration outputs in timestamped directories.
+
+Intended use
+------------
+This tool is designed for experimental image exploration, procedural
+outpainting, and grid-based visual expansion workflows. It is especially
+useful when working with tiled or partially-known image layouts that
+benefit from generative completion.
+
+Requirements
+------------
+- CUDA-capable GPU
+- PyTorch
+- diffusers
+- Pillow (PIL)
+- BeautifulSoup4
+- requests
+
+Execution
+---------
+Run the script from the command line and provide prompts and parameters
+via CLI arguments. See ``--help`` for details.
+
+Note
+----
+NSFW filtering can be disabled via configuration. Use responsibly and
+ensure compliance with model and content policies.
+"""
 from pathlib import Path
 import random
 import torch
