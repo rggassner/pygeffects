@@ -47,7 +47,7 @@ ensure compliance with model and content policies.
 from pathlib import Path
 import random
 import torch
-import cv2 
+import cv2
 import numpy as np
 from PIL import Image
 from diffusers import (
@@ -262,7 +262,7 @@ def segval(segment, key, default):
     -------
     Any
         The segment-specific value if defined, otherwise the default.
-    """    
+    """
     return segment.get(key, default)
 
 
@@ -305,7 +305,7 @@ def apply_transform(image, zoom=1.0, rotate=0.0, shift_x=0, shift_y=0):
     - Rotation does not expand the canvas; corners may be clipped.
     - Shifting introduces black padding, which can be handled downstream
       by inpainting or diffusion-based correction.
-    """    
+    """
     w, h = image.size
 
     if zoom != 1.0:
@@ -353,7 +353,7 @@ def add_micro_noise(image, amount):
     -------
     PIL.Image.Image
         Image with subtle noise blended in.
-    """    
+    """
     noise = Image.effect_noise(image.size, random.uniform(2, 8)).convert("RGB")
     return Image.blend(image, noise, amount)
 
@@ -390,7 +390,7 @@ def remove_black_pixels(img_pil):
       for `cv2` members are safely suppressed.
     - Inpainting uses the Telea algorithm, which favors smooth and natural
       reconstruction suitable for generative art workflows.
-    """    
+    """
     img_rgb = np.array(img_pil)
 
     lower = np.clip(
@@ -413,7 +413,7 @@ def remove_black_pixels(img_pil):
         mask,
         BLACK_INPAINT_RADIUS,
         cv2.INPAINT_TELEA # pylint: disable=no-member
-    ) 
+    )
 
     return Image.fromarray(inpainted)
 
@@ -523,4 +523,3 @@ for seg in SEGMENTS:
         )
 
         frame_idx += 1
-
