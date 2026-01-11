@@ -1,13 +1,12 @@
 #!venv/bin/python3
-import cv2
-import numpy as np
 import os
 import sys
 import argparse
 import torch
-from pathlib import Path
 from PIL import Image
 from diffusers import StableDiffusionXLImg2ImgPipeline
+import numpy as np
+import cv2
 
 # =========================
 # Defaults
@@ -18,11 +17,11 @@ HEIGHT = 1024
 STEPS = 35
 GUIDANCE_SCALE = 7.5
 SEED = 1337970693
-DENOISING_STRENGTH = 0.8
-TEMPORAL_STRENGTH = 0.5  # how much previous frame dominates
+DENOISING_STRENGTH = 0.6
+TEMPORAL_STRENGTH = 0.6  # how much previous frame dominates
 
 MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
-MODEL_CACHE = "/tmp/hf_models"
+MODEL_CACHE = "hf_models"
 
 # =========================
 # Helpers
@@ -87,9 +86,43 @@ def inpaint_replace(image_rgb, mask, radius):
 # Main
 # =========================
 
-def main():
+def main(): #pylint: disable=too-many-statements, too-many-locals
+    """
+    Main entry point for the video-to-SDXL img2img processing pipeline.
+
+    This function parses command-line arguments, loads a Stable Diffusion XL
+    img2img model, iterates over frames of an input video, optionally applies
+    color-based masking and replacement, performs temporal blending with the
+    previous generated frame, and finally runs SDXL img2img to generate a
+    stylized output frame for each video frame.
+
+    High-level pipeline:
+    1. Parse CLI arguments that control video input, output paths, masking
+       behavior, SDXL parameters, and temporal blending strength.
+    2. Load the SDXL img2img pipeline with GPU acceleration.
+    3. Open the input video and iterate frame by frame.
+    4. Resize frames to the target resolution.
+    5. Detect pixels within a target color range and optionally replace them
+       using Gaussian noise or inpainting.
+    6. Merge the current frame with the previously generated frame to enforce
+       temporal coherence.
+    7. Run SDXL img2img using the processed frame as the init image.
+    8. Save each generated frame with a zero-padded sequential filename.
+
+    The output is a directory of generated PNG frames suitable for later
+    post-processing, such as frame interpolation or video reassembly.
+
+    Command-line arguments control:
+    - Masking method ("none", "gaussian", "inpaint")
+    - Target color and tolerance for masking
+    - Noise or inpainting parameters
+    - SDXL prompt, negative prompt, and generation settings
+    - Temporal blending strength between consecutive frames
+
+    This function exits the program if the input video cannot be opened.
+    """
     parser = argparse.ArgumentParser(
-        description="Video → temporal merge → SDXL img2img"
+        description="Video, temporal merge, SDXL img2img"
     )
 
     parser.add_argument("video_file")
@@ -146,7 +179,7 @@ def main():
     # Video processing
     # =========================
 
-    cap = cv2.VideoCapture(args.video_file)
+    cap = cv2.VideoCapture(args.video_file) # pylint: disable=no-member
     if not cap.isOpened():
         print("Could not open video")
         sys.exit(1)
@@ -159,14 +192,14 @@ def main():
         if not ret:
             break
 
-        frame = cv2.resize(
+        frame = cv2.resize( # pylint: disable=no-member
             frame,
             (args.width, args.height),
-            interpolation=cv2.INTER_AREA
+            interpolation=cv2.INTER_AREA # pylint: disable=no-member
         )
 
         image_bgr = frame
-        image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+        image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB) # pylint: disable=no-member
 
         mask = color_range_mask(
             image_rgb,
@@ -179,7 +212,7 @@ def main():
 
         elif args.method == "inpaint" and mask.any():
             image_rgb = inpaint_replace(image_rgb, mask, args.inpaint_radius)
-            image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+            image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR) # pylint: disable=no-member
 
         # =========================
         # Temporal merge
@@ -197,7 +230,7 @@ def main():
         # =========================
 
         init_image = Image.fromarray(
-            cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+            cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB) # pylint: disable=no-member
         )
 
         result = pipe(
@@ -214,9 +247,9 @@ def main():
         output_path = os.path.join(args.output_path, filename)
         result.save(output_path)
 
-        prev_generated_bgr = cv2.cvtColor(
+        prev_generated_bgr = cv2.cvtColor( # pylint: disable=no-member
             np.array(result),
-            cv2.COLOR_RGB2BGR
+            cv2.COLOR_RGB2BGR # pylint: disable=no-member
         )
 
         print(f"Frame {frame_index} done")
@@ -227,4 +260,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
