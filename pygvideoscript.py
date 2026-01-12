@@ -75,16 +75,35 @@ def gaussian_replace(image, mask, noise_level):
 
 
 def inpaint_replace(image_rgb, mask, radius):
-    return cv2.inpaint(
+    """
+    Replace masked regions in an RGB image using OpenCV inpainting.
+
+    This function fills in the areas specified by a binary mask using OpenCV’s
+    Telea inpainting algorithm. The masked pixels are reconstructed based on
+    surrounding pixel information, producing a visually plausible replacement
+    that blends smoothly with the rest of the image.
+
+    Parameters:
+        image_rgb (numpy.ndarray):
+            Input image in RGB format.
+        mask (numpy.ndarray):
+            Single-channel binary mask where non-zero pixels indicate regions
+            to be inpainted.
+        radius (int):
+            Radius of the circular neighborhood used for inpainting. Larger
+            values consider more surrounding pixels and may produce smoother
+            but less detailed results.
+
+    Returns:
+        numpy.ndarray:
+            The inpainted RGB image with masked regions filled in.
+    """    
+    return cv2.inpaint( # pylint: disable=no-member
         image_rgb,
         mask,
         inpaintRadius=radius,
-        flags=cv2.INPAINT_TELEA
+        flags=cv2.INPAINT_TELEA # pylint: disable=no-member
     )
-
-# =========================
-# Main
-# =========================
 
 def main(): #pylint: disable=too-many-statements, too-many-locals
     """
@@ -260,3 +279,4 @@ def main(): #pylint: disable=too-many-statements, too-many-locals
 
 if __name__ == "__main__":
     main()
+
