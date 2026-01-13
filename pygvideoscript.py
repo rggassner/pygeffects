@@ -8,10 +8,6 @@ from diffusers import StableDiffusionXLImg2ImgPipeline
 import numpy as np
 import cv2
 
-# =========================
-# Defaults
-# =========================
-
 WIDTH = 1024
 HEIGHT = 1024
 STEPS = 35
@@ -21,11 +17,8 @@ DENOISING_STRENGTH = 0.6
 TEMPORAL_STRENGTH = 0.6  # how much previous frame dominates
 
 MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
-MODEL_CACHE = "hf_models"
+MODEL_CACHE = "/home/rgg/hf_models"
 
-# =========================
-# Helpers
-# =========================
 
 def ensure_output_dir(path):
     os.makedirs(path, exist_ok=True)
@@ -63,11 +56,31 @@ def merge_temporal(prev_bgr, curr_bgr, strength):
 
     return cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
 
-# =========================
-# Noise / Inpainting
-# =========================
 
 def gaussian_replace(image, mask, noise_level):
+    """
+    Replace masked regions in an image by injecting Gaussian noise.
+
+    This function adds zero-mean Gaussian noise to the pixels selected by a
+    binary mask. The noise is applied only to masked regions, creating a
+    stochastic texture that can be useful for obscuring solid colors or
+    breaking up uniform areas before further processing.
+
+    Parameters:
+        image (numpy.ndarray):
+            Input image array, typically in BGR or RGB format.
+        mask (numpy.ndarray):
+            Single-channel binary mask where non-zero values indicate pixels
+            that will receive noise.
+        noise_level (int or float):
+            Standard deviation of the Gaussian noise distribution. Higher
+            values produce stronger noise.
+
+    Returns:
+        numpy.ndarray:
+            The resulting image with Gaussian noise applied to masked regions,
+            clipped to the valid 8-bit range [0, 255].
+    """
     noise = np.random.normal(0, noise_level, image.shape).astype(np.int16)
     img = image.astype(np.int16)
     img[mask > 0] += noise[mask > 0]
@@ -104,6 +117,7 @@ def inpaint_replace(image_rgb, mask, radius):
         inpaintRadius=radius,
         flags=cv2.INPAINT_TELEA # pylint: disable=no-member
     )
+
 
 def main(): #pylint: disable=too-many-statements, too-many-locals
     """
