@@ -17,7 +17,7 @@ DENOISING_STRENGTH = 0.6
 TEMPORAL_STRENGTH = 0.6  # how much previous frame dominates
 
 MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
-MODEL_CACHE = "/home/rgg/hf_models"
+MODEL_CACHE = "hf_models"
 
 
 def ensure_output_dir(path):
@@ -25,10 +25,33 @@ def ensure_output_dir(path):
 
 
 def color_range_mask(image_rgb, target_color, color_range):
+    """
+    Create a binary mask for pixels within a target RGB color range.
+
+    This function generates a mask by selecting pixels whose RGB values fall
+    within a specified tolerance range around a target color. The result is a
+    single-channel binary image where matching pixels are marked as non-zero
+    and all others are zero.
+
+    Parameters:
+        image_rgb (numpy.ndarray):
+            Input image in RGB format.
+        target_color (tuple or list of int):
+            Target RGB color as (R, G, B).
+        color_range (int):
+            Tolerance applied to each color channel. Pixels are selected if
+            their values fall within [target_color - color_range,
+            target_color + color_range].
+
+    Returns:
+        numpy.ndarray:
+            Single-channel binary mask (uint8) where non-zero values indicate
+            pixels within the specified color range.
+    """    
     target = np.array(target_color, dtype=np.int16)
     lower = np.clip(target - color_range, 0, 255).astype(np.uint8)
     upper = np.clip(target + color_range, 0, 255).astype(np.uint8)
-    return cv2.inRange(image_rgb, lower, upper)
+    return cv2.inRange(image_rgb, lower, upper) # pylint: disable=no-member
 
 
 def merge_temporal(prev_bgr, curr_bgr, strength):
@@ -37,8 +60,8 @@ def merge_temporal(prev_bgr, curr_bgr, strength):
     """
     assert 0.0 <= strength <= 1.0
 
-    prev_lab = cv2.cvtColor(prev_bgr, cv2.COLOR_BGR2LAB)
-    curr_lab = cv2.cvtColor(curr_bgr, cv2.COLOR_BGR2LAB)
+    prev_lab = cv2.cvtColor(prev_bgr, cv2.COLOR_BGR2LAB) # pylint: disable=no-member
+    curr_lab = cv2.cvtColor(curr_bgr, cv2.COLOR_BGR2LAB) # pylint: disable=no-member
 
     merged = curr_lab.copy()
 
@@ -54,7 +77,7 @@ def merge_temporal(prev_bgr, curr_bgr, strength):
         curr_lab[:, :, 1:] * 0.2
     ).astype(np.uint8)
 
-    return cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
+    return cv2.cvtColor(merged, cv2.COLOR_LAB2BGR) # pylint: disable=no-member
 
 
 def gaussian_replace(image, mask, noise_level):
