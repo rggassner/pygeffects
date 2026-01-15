@@ -17,10 +17,20 @@ DENOISING_STRENGTH = 0.6
 TEMPORAL_STRENGTH = 0.6  # how much previous frame dominates
 
 MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
-MODEL_CACHE = "hf_models"
+MODEL_CACHE = "/home/rgg/hf_models"
 
 
 def ensure_output_dir(path):
+    """
+    Ensure that an output directory exists.
+
+    This function creates the directory at the given path if it does not
+    already exist. If the directory is already present, no error is raised.
+
+    Parameters:
+        path (str):
+            Filesystem path of the directory to create or verify.
+    """    
     os.makedirs(path, exist_ok=True)
 
 
