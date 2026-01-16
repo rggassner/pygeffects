@@ -1,4 +1,40 @@
 #!venv/bin/python3
+"""
+Video-to-SDXL img2img processing pipeline with temporal coherence.
+
+This script processes an input video frame by frame and generates a new
+sequence of images using Stable Diffusion XL (SDXL) in img2img mode.
+Each frame can be pre-processed using color-based masking, optionally
+replacing selected regions via Gaussian noise injection or OpenCV
+inpainting before being passed to SDXL.
+
+To reduce temporal flicker and improve visual continuity, the pipeline
+blends each frame with the previously generated output using a LAB-space
+temporal merge. The resulting frames are saved as sequentially numbered
+PNG images, suitable for later reassembly into a video or for further
+post-processing such as frame interpolation.
+
+Key features:
+- Command-line interface for full pipeline control
+- Frame-by-frame video decoding using OpenCV
+- RGB color-range masking with configurable tolerance
+- Optional masked-region replacement via Gaussian noise or inpainting
+- Temporal blending between consecutive generated frames
+- SDXL img2img inference with configurable prompt and generation settings
+- Deterministic output via explicit random seed control
+
+Typical use cases include:
+- Style transfer over video with improved temporal stability
+- Selective replacement or destruction of flat-color regions
+- Generation of AI-augmented video frame datasets
+
+The script assumes:
+- A CUDA-capable GPU
+- A locally cached SDXL model
+- OpenCV, PyTorch, Diffusers, NumPy, and PIL installed
+
+Execution starts in `main()` when the script is run directly.
+"""
 import os
 import sys
 import argparse
@@ -17,7 +53,7 @@ DENOISING_STRENGTH = 0.6
 TEMPORAL_STRENGTH = 0.6  # how much previous frame dominates
 
 MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
-MODEL_CACHE = "/home/rgg/hf_models"
+MODEL_CACHE = "hf_models"
 
 
 def ensure_output_dir(path):
@@ -30,7 +66,7 @@ def ensure_output_dir(path):
     Parameters:
         path (str):
             Filesystem path of the directory to create or verify.
-    """    
+    """
     os.makedirs(path, exist_ok=True)
 
 
@@ -57,7 +93,7 @@ def color_range_mask(image_rgb, target_color, color_range):
         numpy.ndarray:
             Single-channel binary mask (uint8) where non-zero values indicate
             pixels within the specified color range.
-    """    
+    """
     target = np.array(target_color, dtype=np.int16)
     lower = np.clip(target - color_range, 0, 255).astype(np.uint8)
     upper = np.clip(target + color_range, 0, 255).astype(np.uint8)
@@ -143,7 +179,7 @@ def inpaint_replace(image_rgb, mask, radius):
     Returns:
         numpy.ndarray:
             The inpainted RGB image with masked regions filled in.
-    """    
+    """
     return cv2.inpaint( # pylint: disable=no-member
         image_rgb,
         mask,
@@ -326,4 +362,3 @@ def main(): #pylint: disable=too-many-statements, too-many-locals
 
 if __name__ == "__main__":
     main()
-
