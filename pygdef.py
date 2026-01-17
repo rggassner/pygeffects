@@ -86,7 +86,7 @@ MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
 
 # MODEL_CACHE
 # Local directory where Hugging Face models are cached
-# default: "/home/rgg/hf_models"
+# default: "hf_models"
 # range: any valid local path with read access
 MODEL_CACHE = "hf_models"
 
