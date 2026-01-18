@@ -94,6 +94,44 @@ def parse_args():
 # =========================================================
 
 def main():
+    """
+    Entry point for batch image generation using Stable Diffusion XL (text-to-image).
+
+    This function parses command-line arguments, initializes a Stable Diffusion XL
+    pipeline, and generates one or more images from a text prompt. Each image is
+    produced independently, optionally using a fixed random seed for reproducible
+    results, and saved to the specified output directory with an indexed filename.
+
+    The pipeline runs on CUDA using half-precision (float16) tensors and relies on
+    locally cached model files. Progress reporting is enabled for visibility during
+    generation.
+
+    Workflow
+    --------
+    1. Parse command-line arguments (prompt, output directory, generation settings).
+    2. Create the output directory if it does not already exist.
+    3. Load the Stable Diffusion XL base model and move it to the GPU.
+    4. Initialize a CUDA random number generator if a seed is provided.
+    5. Generate the requested number of images using the same prompt and settings.
+    6. Save each generated image to disk with an index and seed identifier.
+
+    Notes
+    -----
+    - If a seed is provided, all images are generated deterministically from that
+      seed; otherwise, each image uses a random seed.
+    - Images are generated directly from text (text-to-image), not img2img.
+    - The output filenames include the seed value (or 'random') for traceability.
+
+    Side Effects
+    ------------
+    - Writes PNG image files to the output directory.
+    - Prints the path of each saved image to stdout.
+
+    Raises
+    ------
+    RuntimeError
+        If the model cannot be loaded, CUDA is unavailable, or inference fails.
+    """    
     args = parse_args()
 
     out_dir = Path(args.out)
@@ -137,3 +175,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
