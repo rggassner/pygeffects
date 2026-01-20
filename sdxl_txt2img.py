@@ -14,7 +14,7 @@ from pathlib import Path
 import torch
 from diffusers import StableDiffusionXLPipeline
 
-MODEL_CACHE = "hf_models"
+MODEL_CACHE = "/home/rgg/hf_models"
 
 
 # =========================================================
@@ -22,6 +22,27 @@ MODEL_CACHE = "hf_models"
 # =========================================================
 
 def parse_args():
+    """
+    Parse and validate command-line arguments for the SDXL text-to-image generator.
+
+    This function defines all supported CLI options used to control image
+    generation parameters such as prompts, diffusion settings, image
+    resolution, reproducibility, and output handling. It returns an
+    argparse.Namespace object containing the parsed values.
+
+    Returns:
+        argparse.Namespace: Parsed command-line arguments with the following
+        attributes:
+            prompt (str): Positive text prompt describing the desired image.
+            negative (str): Negative prompt to suppress unwanted features.
+            steps (int): Number of diffusion steps to run.
+            cfg (float): Classifier-free guidance scale controlling prompt strength.
+            width (int): Width of the generated image in pixels.
+            height (int): Height of the generated image in pixels.
+            seed (int or None): Random seed for reproducibility, or None for random.
+            num (int): Number of images to generate.
+            out (str): Output directory where generated images will be saved.
+    """
     parser = argparse.ArgumentParser(
         description="Simple SDXL text-to-image generator"
     )
@@ -131,7 +152,7 @@ def main():
     ------
     RuntimeError
         If the model cannot be loaded, CUDA is unavailable, or inference fails.
-    """    
+    """
     args = parse_args()
 
     out_dir = Path(args.out)
@@ -175,4 +196,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
