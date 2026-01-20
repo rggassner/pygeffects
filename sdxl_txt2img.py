@@ -14,7 +14,7 @@ from pathlib import Path
 import torch
 from diffusers import StableDiffusionXLPipeline
 
-MODEL_CACHE = "/home/rgg/hf_models"
+MODEL_CACHE = "hf_models"
 
 
 # =========================================================
